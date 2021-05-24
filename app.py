@@ -102,7 +102,7 @@ choose_ur_graph()
 
 st.write('And if you want to see the evolution of one of the variables through time, you can do it hereafter')
 st.sidebar.write('Trend over time')
-variable = st.sidebar.selectbox("What trend across time do you want to explore ?", data.columns)
+variable = st.sidebar.selectbox("What trend across time do you want to explore ?", data.columns.drop("DateTime",axis=1))
 variable_accross_time = px.line(data_frame=data, x=data.DateTime,y=variable,title=f'{variable} evolution across time')
 st.plotly_chart(variable_accross_time,use_container_width=True)
 
