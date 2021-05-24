@@ -1,9 +1,0 @@
-streamlit
-pandas
-numpy
-matplotlib
-plotly
-sklearn
-datetime
-watchdog
-seaborn
