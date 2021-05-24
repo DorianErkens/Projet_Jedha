@@ -53,7 +53,7 @@ def load_process_data():
         "WS10M":"Wind speed at 10 meters",
         'ALLSKY_SFC_SW_DWN':"Sky Insolation Incident",
         'PS':'Surface Pressure',
-        'QV2M':'Specific Humidity at 2 meters',
+        #'QV2M':'Specific Humidity at 2 meters',
         'T2MWET':'Wet Bulb temperature at 2 meters',
         'T2MDEW':'Dew/Frost point at 2 meters'})
     data['Sky Insolation Incident'] = np.where(data['Sky Insolation Incident']<-10, data['Sky Insolation Incident'].median(),data['Sky Insolation Incident'])
@@ -68,7 +68,7 @@ def load_process_data():
     'Wind speed at 10 meters',
     "Sky Insolation Incident",
     "Surface Pressure",
-    'Specific Humidity at 2 meters',
+    #'Specific Humidity at 2 meters',
     'Wet Bulb temperature at 2 meters',
     'Dew/Frost point at 2 meters',
     'DateTime',
@@ -96,7 +96,7 @@ st.sidebar.write('Explore on your own')
 def choose_ur_graph():
     x_value = st.sidebar.selectbox("What do you want to see on the x scale ?", data.columns)
     y_value = st.sidebar.selectbox("What do you want to see on the y scale ?", data.columns)
-    fig = px.line(data_frame=data, x=x_value,y=y_value,title=f'{y_value} in fonction of {x_value}')
+    fig = px.scatter(data_frame=data, x=x_value,y=y_value,title=f'{y_value} in fonction of {x_value}')
     st.plotly_chart(fig,use_container_width=True)
 choose_ur_graph()
 
