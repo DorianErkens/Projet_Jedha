@@ -116,4 +116,14 @@ sns.heatmap(corr, cmap=cmap,annot=True, vmax=.3, center=0,
 st.write(fig)
 
 #Supervised Machine Learning
-st.header('Supervised Machine Learning')
+st.header('ARIMA Method')
+
+
+
+#Deep Learning
+st.header('Rolling in the deep ...')
+st.subheader('Deep Neural Network')
+
+st.subheader('Recurrent Neural Network')
+
+st.subheader('LSTM')
