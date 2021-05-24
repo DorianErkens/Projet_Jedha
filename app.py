@@ -109,7 +109,7 @@ st.plotly_chart(variable_accross_time,use_container_width=True)
 st.subheader('Evaluation of correlations between variables')
 st.write('In order to properly analyze your dataset, you should always look at the correlation each variable has between one another')
 corr = data.corr()
-fig, ax = plt.subplots(figsize=(25, 18))
+fig, ax = plt.subplots(figsize=(35, 18))
 cmap = sns.diverging_palette(230, 20, as_cmap=True)
 sns.heatmap(corr, cmap=cmap,annot=True, vmax=.3, center=0,
             square=True, linewidths=.5, cbar_kws={"shrink": .5})
