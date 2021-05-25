@@ -7,18 +7,19 @@ import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 import datetime as dt
 
-
+st.set_page_config(page_title='Groundwater level prediction',
+                   layout="wide")
 #Titre et plan de l'application
 st.title('Groundwater level prediction')
 st.write('This web application has been designed to draft a first work on predicting groundwater levels')
 st.write('We have selected 5 different locations in France to work on, you will be able to choose from those during your test of our app')
-st.write("""The content is designed in 4 steps :
-                *1. Data Geography
-                *2. Data Exploration
-                *3. Supervised Machine Learning
-                *4. Deep Learning
-                *5. General conclusions
-                *6. References & Credits""")
+st.write("""The content is designed in 4 steps :  
+                1. Data Geography  
+                2. Data Exploration  
+                3. Supervised Machine Learning  
+                4. Deep Learning  
+                5. General conclusions  
+                6. References & Credits""")
 
 
 #Data Gegraphy
@@ -87,9 +88,10 @@ st.dataframe(data=data.head())
 
 st.subheader('Quick descriptive analytics for {}'.format(localisation))
 st.write('Lorem ipsum')
-left_column, right_column = st.beta_columns(2)
-cote_time = px.line(data_frame=data, x='DateTime',y='Cote',title='Cote across time')
-st.plotly_chart(cote_time, use_container_width=True)
+left_column, right_column = st.beta_columns([2,2])
+with left_column :
+    cote_time = px.line(data_frame=data, x='DateTime',y='Cote',title='Cote across time')
+    st.plotly_chart(cote_time, use_container_width=True)
 #Here we will propose on-demand graphs
 st.write("You can also explore the dataset on your own, and get a glimpse of inter-variables relationship")
 st.sidebar.write('Explore on your own')
@@ -109,7 +111,7 @@ st.plotly_chart(variable_accross_time,use_container_width=True)
 st.subheader('Evaluation of correlations between variables')
 st.write('In order to properly analyze your dataset, you should always look at the correlation each variable has between one another')
 corr = data.corr()
-fig, ax = plt.subplots(figsize=(55, 18))
+fig, ax = plt.subplots(figsize=(20, 15))
 cmap = sns.diverging_palette(230, 20, as_cmap=True)
 sns.heatmap(corr, cmap=cmap,annot=True, vmax=.3, center=0,
             square=True, linewidths=.5, cbar_kws={"shrink": .5})
