@@ -13,7 +13,7 @@ st.set_page_config(page_title='Groundwater level prediction',
 st.title('Groundwater level prediction')
 st.write('This web application has been designed to draft a first work on predicting groundwater levels')
 st.write('We have selected 5 different locations in France to work on, you will be able to choose from those during your test of our app')
-st.write("""The content is designed in 4 steps :  
+st.write("""The content is designed in 6 steps :  
                 1. Data Geography  
                 2. Data Exploration  
                 3. Supervised Machine Learning  
