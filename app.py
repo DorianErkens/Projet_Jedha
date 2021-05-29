@@ -1,3 +1,4 @@
+from numpy.core.fromnumeric import size
 import streamlit as st
 import pandas as pd 
 import numpy as np 
@@ -148,14 +149,51 @@ heatmap()
 
 #Supervised Machine Learning
 st.header("Supervised Machine Learning")
+#Function that will preprocess the dataset to be properly managed with ML/DL algo, namely Date
+
+
+
+
+
 st.subheader('ARIMA Method')
 
 
 
 #Deep Learning
-st.header('Rolling in the deep ...')
-st.subheader('Deep Neural Network')
+st.header('Groundwater level rediction')
+st.subheader('Predictions are based on a single-shot multi-steps LSTM model ')
+st.write('In order to properly take previous observations into account, we have decided to based our model on RNN deep learning algorithms')
+def data_4ml():
+    return data
 
-st.subheader('Recurrent Neural Network')
+predict_button, model_architecture = st.beta_columns([2,2])
+with predict_button:
+    with st.form('Predict Groundwater level'):
+        st.write(' ')
+        st.write(' ')
+        st.write(' ')
+        st.write(' ')
+        st.header('Predict Groundwater level')
+        input_var = st.slider(label='Predicted time frame (days)', min_value=1,max_value=50,key=4)
+        submitted = st.form_submit_button('Predict')
+        st.write(' ')
+        st.write(' ')
+        st.write(' ')
+        st.write(' ')
+        if submitted : 
+            st.write('The prediction will be here')
+        
+with model_architecture:
+    img = 'https://erdo-streamlit-911.s3.eu-central-1.amazonaws.com/Dataset_final_project/LSTM_model_architecture_1.png'
+    st.subheader('Example : Single-shot multi-step LSTM model')
+    st.image(img)
+
+
+
+
+
+
+
+st.subheader('Deep Neural Network')
 
 st.subheader('LSTM')
