@@ -147,7 +147,8 @@ def heatmap():
 heatmap()
 
 #Supervised Machine Learning
-st.header('ARIMA Method')
+st.header("Supervised Machine Learning")
+st.subheader('ARIMA Method')
 
 
 
