@@ -32,14 +32,22 @@ geo_data = pd.DataFrame({
     'Lon' : [0.91541,4.18431,-1.05959,3.85371,3.10031],
     'Size' : [1]*5})
 #st.dataframe(geo_data)
-st.subheader("All dataset localisations on the map of France")
-fig = px.scatter_mapbox(data_frame=geo_data, lat="Lat", lon="Lon",color="City",mapbox_style="open-street-map",
-color_continuous_scale=px.colors.cyclical.IceFire, size_max=10,zoom=4,size="Size")
-st.plotly_chart(fig, use_container_width=True)
+def two_side_graph():
+    left_column, right_column = st.beta_columns([4,2])
+    with left_column :
+        st.subheader("All dataset localisations on the map of France")
+        fig = px.scatter_mapbox(data_frame=geo_data, lat="Lat", lon="Lon",color="City",mapbox_style="open-street-map",
+        color_continuous_scale=px.colors.cyclical.IceFire, size_max=10,zoom=4,size="Size")
+        st.plotly_chart(fig, use_container_width=True)
+    with right_column:
+        st.subheader('Clustering groundwater in France')
+        st.write(" \n Source : BRGM ")
+        img = "https://cdn-s-www.dna.fr/images/44BFDCCC-D30B-4464-9840-360F0567C6C1/NW_raw/infographie-brgm-1557918355.jpg"
+        st.image(img)
+two_side_graph()
 
 st.sidebar.header('Data Exploration')
 localisation = st.sidebar.selectbox("What localisation do you want to see ?",["Athée-sur-Cher, 37","Cleppé, 42", "Vendays-Montalivet, 33","Saint-Jean-de-Védas, 34","Beauvois-en-Vermandois, 02"] )
-
 
 if localisation == geo_data.City[0]: 
     #get the dataset on S3 for the selected city
@@ -96,16 +104,13 @@ st.write('In this section we will explore quick descriptive analytics on the dat
 st.subheader('A glimpse at the dataset')
 st.dataframe(data=data.head())
 
-st.subheader('Quick descriptive analytics for {}'.format(localisation))
-st.write('Lorem ipsum')
-left_column, right_column = st.beta_columns([2,2])
-with left_column :
-    cote_time = px.line(data_frame=data, x='DateTime',y='Cote',title='Cote across time')
+st.subheader('Descriptive analytics for {}'.format(localisation))
+st.write('Hereafter, you can have some informations about the dataset and the relationship and behaviors of some of its features ')
+def cote_time():
+    st.subheader('State of groundwater across time')
+    cote_time = px.line(data_frame=data, x='DateTime',y='Cote')
     st.plotly_chart(cote_time, use_container_width=True)
-#with right_column:
-
-
-
+cote_time()
 #Here we will propose on-demand graphs
 st.write("You can also explore the dataset on your own, and get a glimpse of inter-variables relationship")
 st.sidebar.write('Explore on your own')
@@ -116,7 +121,8 @@ def choose_ur_graph():
     df = data[[x_value,y_value]]
     corr = df.corr()
     corr_nb = round(corr.iloc[0,1],4)
-    fig = px.scatter(data_frame=data, x=x_value,y=y_value,title=f'{y_value} in fonction of {x_value} - Correlation of {corr_nb}')
+    st.subheader(f'{y_value} in fonction of {x_value} - Correlation of {corr_nb}')
+    fig = px.scatter(data_frame=data, x=x_value,y=y_value)
     st.plotly_chart(fig,use_container_width=True)
 choose_ur_graph()
 
@@ -124,7 +130,8 @@ def time_graph():
     st.write('And if you want to see the evolution of one of the variables through time, you can do it hereafter')
     st.sidebar.write('Trend over time')
     variable = st.sidebar.selectbox("What trend across time do you want to explore ?", data.columns.drop("DateTime"))
-    variable_accross_time = px.line(data_frame=data, x=data.DateTime,y=variable,title=f'{variable} evolution across time')
+    variable_accross_time = px.line(data_frame=data, x=data.DateTime,y=variable)
+    st.subheader(f'{variable} evolution across time')
     st.plotly_chart(variable_accross_time,use_container_width=True)
 time_graph()
 
