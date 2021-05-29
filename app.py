@@ -7,8 +7,8 @@ import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 import datetime as dt
 
-st.set_page_config(page_title='Groundwater level prediction',
-                   layout="wide")
+st.set_page_config(page_title='Groundwater level prediction - Data Project',
+                   layout="wide" )
 #Titre et plan de l'application
 st.title('Groundwater level prediction')
 st.write('This web application has been designed to draft a first work on predicting groundwater levels')
