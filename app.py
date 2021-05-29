@@ -187,13 +187,3 @@ with model_architecture:
     img = 'https://erdo-streamlit-911.s3.eu-central-1.amazonaws.com/Dataset_final_project/LSTM_model_architecture_1.png'
     st.subheader('Example : Single-shot multi-step LSTM model')
     st.image(img)
-
-
-
-
-
-
-
-st.subheader('Deep Neural Network')
-
-st.subheader('LSTM')
