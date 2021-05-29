@@ -26,20 +26,31 @@ st.header('Data Geography')
 st.write('In this section we will choose on the map the city we want to explore')
 #DATA_PATH = "/Users/dorian.erkens/Desktop/Jedha_FS_Bootcamp/Final Project/Streamlit/Final Project/venday_dataset.csv"
 DATA_PATH = " "
-cities = ["Athée-sur-Cher, 37","Cleppé, 42", "Vendays-Montalivet, 33","Saint-Jean-de-Védas, 34","Beauvois-en-Vermandois, 02"]
+geo_data = pd.DataFrame({
+    'City' : ["Athée-sur-Cher, 37","Cleppé, 42", "Vendays-Montalivet, 33","Saint-Jean-de-Védas, 34","Beauvois-en-Vermandois, 02"],
+    'Lat' : [47.32111,45.77081,45.35601,43.572309999999995,49.842009999999995],
+    'Lon' : [0.91541,4.18431,-1.05959,3.85371,3.10031],
+    'Size' : [1]*5})
+#st.dataframe(geo_data)
+st.subheader("All dataset localisations on the map of France")
+fig = px.scatter_mapbox(data_frame=geo_data, lat="Lat", lon="Lon",color="City",mapbox_style="open-street-map",
+color_continuous_scale=px.colors.cyclical.IceFire, size_max=10,zoom=4,size="Size")
+st.plotly_chart(fig, use_container_width=True)
+
 st.sidebar.header('Data Exploration')
 localisation = st.sidebar.selectbox("What localisation do you want to see ?",["Athée-sur-Cher, 37","Cleppé, 42", "Vendays-Montalivet, 33","Saint-Jean-de-Védas, 34","Beauvois-en-Vermandois, 02"] )
 
-if localisation == cities[0]: 
+
+if localisation == geo_data.City[0]: 
     #get the dataset on S3 for the selected city
     DATA_PATH = 'https://erdo-streamlit-911.s3.eu-central-1.amazonaws.com/Dataset_final_project/Full_DataSet.csv'
-elif localisation == cities[1]: 
+elif localisation == geo_data.City[1]: 
     DATA_PATH = "https://erdo-streamlit-911.s3.eu-central-1.amazonaws.com/Dataset_final_project/cleppe_dataset.csv"
-elif localisation == cities[2]: 
+elif localisation == geo_data.City[2]: 
     DATA_PATH = "https://erdo-streamlit-911.s3.eu-central-1.amazonaws.com/Dataset_final_project/venday_dataset.csv"
-elif localisation == cities[3]: 
+elif localisation == geo_data.City[3]: 
     DATA_PATH = "https://erdo-streamlit-911.s3.eu-central-1.amazonaws.com/Dataset_final_project/saint_jean_de_vedas_dataset.csv"
-elif localisation == cities[4]: 
+elif localisation == geo_data.City[4]: 
     DATA_PATH = "https://erdo-streamlit-911.s3.eu-central-1.amazonaws.com/Dataset_final_project/beauvois-en-vermandois_dataset.csv"
 
 @st.cache
@@ -59,7 +70,7 @@ def load_process_data():
     data['Sky Insolation Incident'] = np.where(data['Sky Insolation Incident']<-10, data['Sky Insolation Incident'].median(),data['Sky Insolation Incident'])
     data['Cote d-1'] = data.Cote.shift(1)
     data = data.drop(data.index[0])
-    if localisation == cities[0]:
+    if localisation == geo_data.City[0]:
         data = data.drop(data.index[0:726])
     data =  data[['Precipitation',
     'Earth Skin Temperature',
@@ -94,6 +105,7 @@ with left_column :
 #with right_column:
 
 
+
 #Here we will propose on-demand graphs
 st.write("You can also explore the dataset on your own, and get a glimpse of inter-variables relationship")
 st.sidebar.write('Explore on your own')
@@ -108,20 +120,24 @@ def choose_ur_graph():
     st.plotly_chart(fig,use_container_width=True)
 choose_ur_graph()
 
-st.write('And if you want to see the evolution of one of the variables through time, you can do it hereafter')
-st.sidebar.write('Trend over time')
-variable = st.sidebar.selectbox("What trend across time do you want to explore ?", data.columns.drop("DateTime"))
-variable_accross_time = px.line(data_frame=data, x=data.DateTime,y=variable,title=f'{variable} evolution across time')
-st.plotly_chart(variable_accross_time,use_container_width=True)
+def time_graph():
+    st.write('And if you want to see the evolution of one of the variables through time, you can do it hereafter')
+    st.sidebar.write('Trend over time')
+    variable = st.sidebar.selectbox("What trend across time do you want to explore ?", data.columns.drop("DateTime"))
+    variable_accross_time = px.line(data_frame=data, x=data.DateTime,y=variable,title=f'{variable} evolution across time')
+    st.plotly_chart(variable_accross_time,use_container_width=True)
+time_graph()
 
-st.subheader('Evaluation of correlations between variables')
-st.write('In order to properly analyze your dataset, you should always look at the correlation each variable has between one another')
-corr = data.corr()
-fig, ax = plt.subplots(figsize=(20, 15))
-cmap = sns.diverging_palette(230, 20, as_cmap=True)
-sns.heatmap(corr, cmap=cmap,annot=True, vmax=.3, center=0,
-            square=True, linewidths=.5, cbar_kws={"shrink": .5})
-st.write(fig)
+def heatmap():
+    st.subheader('Evaluation of correlations between variables')
+    st.write('In order to properly analyze your dataset, you should always look at the correlation each variable has between one another')
+    corr = data.corr()
+    fig, ax = plt.subplots(figsize=(20, 15))
+    cmap = sns.diverging_palette(230, 20, as_cmap=True)
+    sns.heatmap(corr, cmap=cmap,annot=True, vmax=.3, center=0,
+                square=True, linewidths=.5, cbar_kws={"shrink": .5})
+    st.write(fig)
+heatmap()
 
 #Supervised Machine Learning
 st.header('ARIMA Method')
