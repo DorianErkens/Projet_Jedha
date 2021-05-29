@@ -35,7 +35,7 @@ geo_data = pd.DataFrame({
 def two_side_graph():
     left_column, right_column = st.beta_columns([4,2])
     with left_column :
-        st.subheader("All dataset localisations on the map of France")
+        st.subheader("All dataset locations on the map of France")
         fig = px.scatter_mapbox(data_frame=geo_data, lat="Lat", lon="Lon",color="City",mapbox_style="open-street-map",
         color_continuous_scale=px.colors.cyclical.IceFire, size_max=10,zoom=4,size="Size")
         st.plotly_chart(fig, use_container_width=True)
