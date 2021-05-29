@@ -160,7 +160,7 @@ st.subheader('ARIMA Method')
 
 
 #Deep Learning
-st.header('Groundwater level rediction')
+st.header('Groundwater level prediction')
 st.subheader('Predictions are based on a single-shot multi-steps LSTM model ')
 st.write('In order to properly take previous observations into account, we have decided to based our model on RNN deep learning algorithms')
 def data_4ml():
