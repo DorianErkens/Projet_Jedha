@@ -91,12 +91,8 @@ left_column, right_column = st.beta_columns([2,2])
 with left_column :
     cote_time = px.line(data_frame=data, x='DateTime',y='Cote',title='Cote across time')
     st.plotly_chart(cote_time, use_container_width=True)
-with right_column:
-    st.write('And if you want to see the evolution of one of the variables through time, you can do it hereafter')
-    st.sidebar.write('Trend over time')
-    variable = st.sidebar.selectbox("What trend across time do you want to explore ?", data.columns.drop("DateTime"))
-    variable_accross_time = px.line(data_frame=data, x=data.DateTime,y=variable,title=f'{variable} evolution across time')
-    st.plotly_chart(variable_accross_time,use_container_width=True)
+#with right_column:
+
 
 #Here we will propose on-demand graphs
 st.write("You can also explore the dataset on your own, and get a glimpse of inter-variables relationship")
@@ -104,11 +100,19 @@ st.sidebar.write('Explore on your own')
 def choose_ur_graph():
     x_value = st.sidebar.selectbox("What do you want to see on the x scale ?", data.columns)
     y_value = st.sidebar.selectbox("What do you want to see on the y scale ?", data.columns)
-    fig = px.scatter(data_frame=data, x=x_value,y=y_value,title=f'{y_value} in fonction of {x_value}')
+    #x,y = data[x_value], data[y_value]
+    df = data[[x_value,y_value]]
+    corr = df.corr()
+    corr_nb = round(corr.iloc[0,1],4)
+    fig = px.scatter(data_frame=data, x=x_value,y=y_value,title=f'{y_value} in fonction of {x_value} - Correlation of {corr_nb}')
     st.plotly_chart(fig,use_container_width=True)
 choose_ur_graph()
 
-
+st.write('And if you want to see the evolution of one of the variables through time, you can do it hereafter')
+st.sidebar.write('Trend over time')
+variable = st.sidebar.selectbox("What trend across time do you want to explore ?", data.columns.drop("DateTime"))
+variable_accross_time = px.line(data_frame=data, x=data.DateTime,y=variable,title=f'{variable} evolution across time')
+st.plotly_chart(variable_accross_time,use_container_width=True)
 
 st.subheader('Evaluation of correlations between variables')
 st.write('In order to properly analyze your dataset, you should always look at the correlation each variable has between one another')
