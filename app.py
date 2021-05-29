@@ -17,9 +17,8 @@ st.write("""The content is designed in 6 steps :
                 1. Data Geography  
                 2. Data Exploration  
                 3. Supervised Machine Learning  
-                4. Deep Learning  
-                5. General conclusions  
-                6. References & Credits""")
+                4. Deep Learning    
+                5. References & Credits""")
 
 
 #Data Gegraphy
