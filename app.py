@@ -46,7 +46,7 @@ def two_side_graph():
         st.image(img)
 two_side_graph()
 
-st.sidebar.header('Data Exploration')
+st.sidebar.header('Data Geography')
 localisation = st.sidebar.selectbox("What localisation do you want to see ?",["Athée-sur-Cher, 37","Cleppé, 42", "Vendays-Montalivet, 33","Saint-Jean-de-Védas, 34","Beauvois-en-Vermandois, 02"] )
 
 if localisation == geo_data.City[0]: 
@@ -97,7 +97,7 @@ def load_process_data():
     return data
 data = load_process_data()
 
-
+st.sidebar.header('Data Exploration')
 #Data Exploration
 st.header('Data Exploration')
 st.write('In this section we will explore quick descriptive analytics on the dataset')
