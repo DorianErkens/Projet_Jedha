@@ -7,3 +7,7 @@ sklearn
 datetime
 watchdog
 seaborn
+tensorflow
+tensorflow-cpu
+tensorflow-addons
+IPython
