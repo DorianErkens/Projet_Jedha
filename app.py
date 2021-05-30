@@ -22,8 +22,8 @@ st.write('We have selected 5 different locations in France to work on, you will 
 st.write("""The content is designed in 5 steps :  
                 1. Data Geography  
                 2. Data Exploration  
-                3. Supervised Machine Learning  
-                4. Deep Learning    
+                3. Time Series Data Analysis   
+                4. Ground Water Level Prediction    
                 5. References & Credits""")
 
 
@@ -161,7 +161,8 @@ heatmap()
 #Supervised Machine Learning
 st.header("Exploring Time Series Data Analysis ")
 #Function that will preprocess the dataset to be properly managed with ML/DL algo, namely Dat
-
+#add graph for autocorrelation and lags
+#explication pour chacun des graphes
 
 st.subheader('ARIMA Method')
 
