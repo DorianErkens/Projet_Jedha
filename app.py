@@ -6,6 +6,19 @@ import matplotlib.pyplot as plt
 import plotly.express as px 
 import seaborn as sns 
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import r2_score
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import Dense,Dropout,Embedding
+from tensorflow.keras.losses import MeanSquaredError
+from tensorflow.keras.metrics import Accuracy
+import tensorflow_addons as tfa
+from tensorflow_addons.metrics import RSquare
+import os
+import IPython
+import IPython.display
+from datetime import date,datetime
 import datetime as dt
 
 st.set_page_config(page_title='Groundwater level prediction - Data Project',
@@ -62,7 +75,7 @@ elif localisation == geo_data.City[3]:
 elif localisation == geo_data.City[4]: 
     DATA_PATH = "https://erdo-streamlit-911.s3.eu-central-1.amazonaws.com/Dataset_final_project/beauvois-en-vermandois_dataset.csv"
 
-@st.cache
+@st.cache()
 def load_process_data():
     data = pd.read_csv(DATA_PATH)
     data = data.rename(columns={
@@ -95,8 +108,14 @@ def load_process_data():
     'Cote',
     'Cote d-1']]
     data = data.reset_index(drop=True)
-    return data
-data = load_process_data()
+    #process specifically the dataset for ml purposes
+    data_ml = data.copy()
+    data_ml.DateTime = pd.to_datetime(data.DateTime)
+    data_ml.DateTime = pd.to_numeric(data_ml.DateTime)
+    data_ml = data_ml.reset_index(drop=True)
+    
+    return data,data_ml
+data,data_ml = load_process_data()
 
 st.sidebar.header('Data Exploration')
 #Data Exploration
@@ -163,8 +182,193 @@ st.subheader('ARIMA Method')
 st.header('Groundwater level prediction')
 st.subheader('Predictions are based on a single-shot multi-steps LSTM model ')
 st.write('In order to properly take previous observations into account, we have decided to based our model on RNN deep learning algorithms')
-def data_4ml():
-    return data
+#Processing for deep learning
+
+#Split the dataset into three : train, validation and test
+column_indices = {name: i for i,name in enumerate(data_ml.columns)}
+n=len(data_ml)
+train_df = data_ml[0:int(n*0.7)]
+val_df = data_ml[int(n*0.7):int(n*.9)]
+test_df = data_ml[int(n*.9):]
+num_features = data_ml.shape[1]
+
+#Normalize the dataset, using only training datas as you can only use this ds since others cannot be seen by the model to properly work
+#La moyenne et l'écart type doivent être calculés uniquement à l'aide des données d'apprentissage afin que les modèles n'aient pas accès aux valeurs des ensembles de validation et de test.
+train_mean = train_df.mean()
+train_std = train_df.std()
+
+train_df = (train_df - train_mean)/train_std
+valid_df = (val_df - train_mean)/train_std
+test_df = (test_df - train_mean)/train_std
+
+df_std = (data_ml - train_mean) / train_std
+df_std = df_std.melt(var_name='Column', value_name='Normalized')
+
+class WindowGenerator():
+    def __init__(self, input_width, label_width, shift,
+               train_df=train_df, val_df=val_df, test_df=test_df,
+               label_columns=None):
+        # Store the raw data.
+        self.train_df = train_df
+        self.val_df = val_df
+        self.test_df = test_df
+
+        # Work out the label column indices.
+        self.label_columns = label_columns
+        if label_columns is not None:
+            self.label_columns_indices = {name: i for i, name in
+                                        enumerate(label_columns)}
+        self.column_indices = {name: i for i, name in
+                            enumerate(train_df.columns)}
+
+        # Work out the window parameters.
+        #width = le pas de temps avec lequel on veut travailler, cad le nombre de données historiques qu'on va mettre dans la fenêtre pour prédire la suite
+        self.input_width = input_width
+        self.label_width = label_width
+        #shift = le pas de temps que l'on veut prédire à la suite - offset
+        self.shift = shift
+
+        self.total_window_size = input_width + shift
+
+        self.input_slice = slice(0, input_width)
+        self.input_indices = np.arange(self.total_window_size)[self.input_slice]
+
+        self.label_start = self.total_window_size - self.label_width
+        self.labels_slice = slice(self.label_start, None)
+        self.label_indices = np.arange(self.total_window_size)[self.labels_slice]
+
+    def __repr__(self):
+        return '\n'.join([
+        f'Total window size: {self.total_window_size}',
+        f'Input indices: {self.input_indices}',
+        f'Label indices: {self.label_indices}',
+        f'Label column name(s): {self.label_columns}'])
+# Étant donné une liste d'entrées consécutives, la méthode split_window les convertira en une fenêtre d'entrées et une fenêtre d'étiquettes.
+def split_window(self, features):
+  inputs = features[:, self.input_slice, :]
+  labels = features[:, self.labels_slice, :]
+  if self.label_columns is not None:
+    labels = tf.stack(
+        [labels[:, :, self.column_indices[name]] for name in self.label_columns],
+        axis=-1)
+
+  # Slicing doesn't preserve static shape information, so set the shapes
+  # manually. This way the `tf.data.Datasets` are easier to inspect.
+  inputs.set_shape([None, self.input_width, None])
+  labels.set_shape([None, self.label_width, None])
+
+  return inputs, labels
+
+WindowGenerator.split_window = split_window
+
+def plot(self, model=None, plot_col='Cote', max_subplots=3):
+    inputs, labels = self.example
+    plt.figure(figsize=(12, 8))
+    plot_col_index = self.column_indices[plot_col]
+    max_n = min(max_subplots, len(inputs))
+    for n in range(max_n):
+        plt.subplot(max_n, 1, n+1)
+        plt.ylabel(f'{plot_col} [normed]')
+        plt.plot(self.input_indices, inputs[n, :, plot_col_index],
+                label='Inputs', marker='.', zorder=-10)
+
+        if self.label_columns:
+            label_col_index = self.label_columns_indices.get(plot_col, None)
+        else:
+            label_col_index = plot_col_index
+
+        if label_col_index is None:
+            continue
+
+    plt.scatter(self.label_indices, labels[n, :, label_col_index],
+                edgecolors='k', label='Labels', c='#2ca02c', s=64)
+    if model is not None:
+      predictions = model(inputs)
+      plt.scatter(self.label_indices, predictions[n, :, label_col_index],
+                  marker='X', edgecolors='k', label='Predictions',
+                  c='#ff7f0e', s=64)
+
+    if n == 0:
+      plt.legend()
+
+    plt.xlabel('Cote')
+
+WindowGenerator.plot = plot
+
+"""def make_dataset(self,data):
+    data = np.array(data, dtype=np.float32)
+    ds = tf.keras.preprocessing.timeseries_dataset_from_array(
+      data=data,
+      targets=None,
+      sequence_length=self.total_window_size,
+      sequence_stride=1,
+      shuffle=False,
+      batch_size=32)
+    ds = ds.map(self.split_window)
+    return ds 
+
+WindowGenerator.make_dataset = make_dataset
+
+@property
+def train(self):
+  return self.make_dataset(self.train_df)
+
+@property
+def val(self):
+  return self.make_dataset(self.val_df)
+
+@property
+def test(self):
+  return self.make_dataset(self.test_df)
+
+@property
+def example(self):
+  #Get and cache an example batch of `inputs, labels` for plotting.
+  result = getattr(self, '_example', None)
+  if result is None:
+    # No example batch was found, so get one from the `.train` dataset
+    result = next(iter(self.train))
+    # And cache it for next time
+    self._example = result
+  return result
+
+WindowGenerator.train = train
+WindowGenerator.val = val
+WindowGenerator.test = test
+WindowGenerator.example = example"""
+
+
+"""@st.cache()
+def load_ml_model():
+    LSTM_model = keras.models.load_model('/Users/dorian.erkens/Desktop/Jedha_FS_Bootcamp/Test_new_env/saved_model.pb')
+    return LSTM_model
+LSTM_model = load_ml_model()
+
+predict = LSTM_model.predict()"""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 predict_button, model_architecture = st.beta_columns([2,2])
 with predict_button:
@@ -175,15 +379,25 @@ with predict_button:
         st.write(' ')
         st.header('Predict Groundwater level')
         input_var = st.slider(label='Predicted time frame (days)', min_value=1,max_value=50,key=4)
+        multi_window = WindowGenerator(input_width=365,label_width=input_var,shift=input_var)
         submitted = st.form_submit_button('Predict')
         st.write(' ')
         st.write(' ')
         st.write(' ')
         st.write(' ')
         if submitted : 
-            st.write('The prediction will be here')
+            prediction = [1]*input_var
+            st.write(f'The prediction will be here: {prediction}')
         
 with model_architecture:
     img = 'https://erdo-streamlit-911.s3.eu-central-1.amazonaws.com/Dataset_final_project/LSTM_model_architecture_1.png'
     st.subheader('Example : Single-shot multi-step LSTM model')
     st.image(img)
+
+#multi_window.plot(LSTM_model)
+
+st.header("Reference")
+st.subheader('Bibliography')
+st.write('Géron, A. (2019, September). Hands-on Machine Learning with Scikit-Learn,Keras and Tensorflow')
+st.write("Zhang, J., Zhu, Y., Zhang, X., Ye, M., Yang, J., Developing a Long Short-Term Memory(LSTM) based Model for Predicting Water Table Depth in Agricultural Areas, Journal of Hydrology (2018),doi: https://doi.org/10.1016/j.jhydrol.2018.04.065")
+st.write("Jalalkamali, A., Sedghi, H.,Manshouri, M., Monthly groundwater level prediction using ANN and neuro-fuzzy models: a case study on Kerman plain, Iran in Agricultural Areas, Journal of Hydroinformatics (2011)")
