@@ -159,7 +159,7 @@ def heatmap():
 heatmap()
 
 #Supervised Machine Learning
-st.header("Supervised Machine Learning")
+st.header("Exploring Time Series Data Analysis ")
 #Function that will preprocess the dataset to be properly managed with ML/DL algo, namely Dat
 
 
