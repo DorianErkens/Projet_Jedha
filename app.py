@@ -7,7 +7,7 @@ import plotly.express as px
 import seaborn as sns 
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score
-import tensorflow as tf
+"""import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense,Dropout,Embedding
@@ -15,6 +15,7 @@ from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.metrics import Accuracy
 import tensorflow_addons as tfa
 from tensorflow_addons.metrics import RSquare
+"""
 import os
 import IPython
 import IPython.display
