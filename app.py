@@ -11,7 +11,7 @@ from sklearn.metrics import r2_score
 from streamlit.caching import cache
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.models import Sequential, load_model, save_model
 from tensorflow.keras.layers import Dense, Dropout,Embedding, LSTM
 from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.metrics import Accuracy
@@ -22,6 +22,7 @@ import IPython
 import IPython.display
 from datetime import date,datetime
 import datetime as dt
+import h5py
 
 st.set_page_config(page_title='Groundwater level prediction - Data Project',
                    layout="wide" )
@@ -341,37 +342,64 @@ def compile_and_fit(model,window,patience=2):
 
 
 #chargement du modèle LSTM entraîné sur Tensorflow
-model = tf.keras.models.load_model('Test_new_env/final_multi_lstm')
+model = tf.keras.models.load_model('./multi_lstm_model.h5')
 #si cela ne marche pas on passera par un dossier github
 
 #End of the code for it, when time we will need to improve it 
 
 #Choose the model you want to predict
-st.subheader('Encode here the geophyscial features to help the model predict groundwater levels')
-precipitation, earth_skin_temperature = st.beta_columns([3,3])
-with precipitation : 
-    precipitation = st.number_input('Precipitation')
-with earth_skin_temperature : 
-    earth_skin_temperature = st.number_input('Earth Skin Temperature',)
+#st.subheader('Encode here the geophyscial features to help the model predict groundwater levels')
+#precipitation, earth_skin_temperature = st.beta_columns([3,3])
+#with precipitation : 
+#    precipitation = st.number_input('Precipitation')
+#with earth_skin_temperature : 
+#    earth_skin_temperature = st.number_input('Earth Skin Temperature',)
 
-humidity, surface_pressure = st.beta_columns([3,3])
-with humidity : 
-    humidity = st.number_input('Relative Humidity at 2 meters')
-with surface_pressure : 
-    surface_pressure = st.number_input('Surface Pressure')
+#humidity, surface_pressure = st.beta_columns([3,3])
+#with humidity : 
+#    humidity = st.number_input('Relative Humidity at 2 meters')
+#with surface_pressure : 
+#    surface_pressure = st.number_input('Surface Pressure')"""
 
 #Variables for the input of the model.predict
-precipitation = precipitation
-earth_skin_temperature = earth_skin_temperature
-humidity = humidity
-temperature_2m = data['Temperature at 2 meters'].median
-wind_speed_10m = data['Wind speed at 10 meters'].median
-sky_incident = data['Sky Insolation Incident'].median
-surface_pressure = surface_pressure
-wet_bulb_temp_2m = data['Wet Bulb temperature at 2 meters'].median
-frost_point_2m = data['Dew/Frost point at 2 meters'].median
+#precipitation = precipitation
+#earth_skin_temperature = earth_skin_temperature
+#humidity = humidity
+#temperature_2m = data['Temperature at 2 meters'].median
+#wind_speed_10m = data['Wind speed at 10 meters'].median
+#sky_incident = data['Sky Insolation Incident'].median
+#surface_pressure = surface_pressure
+#wet_bulb_temp_2m = data['Wet Bulb temperature at 2 meters'].median
+#frost_point_2m = data['Dew/Frost point at 2 meters'].median
 #pour la facilité du modèle nous prendrons la dernière Cote enregistrée le 29/03/21
-cote = data['Cote'].iloc[-1]
+#cote = data['Cote'].iloc[-1]"""
+
+if localisation == geo_data.City[0]:
+    i=30
+    precipitation = data['Precipitation'].iloc[-i]
+    earth_skin_temperature = data['Earth Skin Temperature'].iloc[-i]
+    humidity = data['Relative Humidity at 2 meters'].iloc[-i]
+    temperature_2m = data['Temperature at 2 meters'].iloc[-i]
+    wind_speed_10m = data['Wind speed at 10 meters'].iloc[-i]
+    sky_incident = data['Sky Insolation Incident'].iloc[-i]
+    surface_pressure = data['Surface Pressure'].iloc[-i]
+    wet_bulb_temp_2m = data['Wet Bulb temperature at 2 meters'].iloc[-i]
+    frost_point_2m = data['Dew/Frost point at 2 meters'].iloc[-i]
+    #pour la facilité du modèle nous prendrons la dernière Cote enregistrée le 29/03/21
+    cote = data['Cote'].iloc[-i]
+else :
+    i=1
+    precipitation = data['Precipitation'].iloc[-i]
+    earth_skin_temperature = data['Earth Skin Temperature'].iloc[-i]
+    humidity = data['Relative Humidity at 2 meters'].iloc[-i]
+    temperature_2m = data['Temperature at 2 meters'].iloc[-i]
+    wind_speed_10m = data['Wind speed at 10 meters'].iloc[-i]
+    sky_incident = data['Sky Insolation Incident'].iloc[-i]
+    surface_pressure = data['Surface Pressure'].iloc[-i]
+    wet_bulb_temp_2m = data['Wet Bulb temperature at 2 meters'].iloc[-i]
+    frost_point_2m = data['Dew/Frost point at 2 meters'].iloc[-i]
+    #pour la facilité du modèle nous prendrons la dernière Cote enregistrée le 29/03/21
+    cote = data['Cote'].iloc[-i]
 
 X = tf.constant([[[precipitation,
                 earth_skin_temperature,
@@ -383,6 +411,10 @@ X = tf.constant([[[precipitation,
                 wet_bulb_temp_2m,
                 frost_point_2m,
                 cote ]]])
+#st.write(X)
+
+
+#X=tf.constant([[[1,2,3,4,5,6,7,8,9,323.53]]])
 
 predict_button, model_architecture = st.beta_columns([2,2])
 with predict_button:
@@ -400,15 +432,21 @@ with predict_button:
         st.write(' ')
         if submitted : 
             prediction = model.predict(X)
+            
             focused_prediction = prediction[0]
             focused_prediction = focused_prediction[-time_frame:]
+
             final_prediction = []
-            final_prediction = [final_prediction.append(array[-1]) for array in focused_prediction]
+            for array in focused_prediction[-time_frame:] :
+                final_prediction.append(array[-1])
+            
+
+            #final_prediction = [final_prediction.append(array[-1]) for array in focused_prediction]
             #create a dataframe to manipulate the normalized prediction and make them normal again
             prediction_cote = pd.DataFrame(final_prediction, columns=['Pred cote'])
             prediction_cote['Pred de_normalize'] = prediction_cote['Pred cote'] * train_std['Cote'] + train_mean['Cote']
             exposed_prediction = prediction_cote['Pred de_normalize'].tolist()
-            st.write(f'The prediction will be here: {exposed_prediction}')
+            st.write(f'The levels for the next {time_frame} days will be : {exposed_prediction}')
         
 with model_architecture:
     img = 'https://static.prod-cms.saurclient.fr/sites/default/files/styles/w1440/public/images/Cycle_eau1.png?itok=X1x6dT9S'
