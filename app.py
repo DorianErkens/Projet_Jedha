@@ -374,6 +374,7 @@ model = tf.keras.models.load_model('./multi_lstm_model.h5')
 #pour la facilité du modèle nous prendrons la dernière Cote enregistrée le 29/03/21
 #cote = data['Cote'].iloc[-1]"""
 
+#problème de nan dans un des datasets
 if localisation == geo_data.City[0]:
     i=30
     precipitation = data['Precipitation'].iloc[-i]
