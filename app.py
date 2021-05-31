@@ -376,6 +376,9 @@ model = tf.keras.models.load_model('./multi_lstm_model.h5')
 
 #problème de nan dans un des datasets
 if localisation == geo_data.City[0]:
+    #on va chercher la n-30 ème lignes, c'est la première à ne pas avoir de nan
+    # il aurait peut-être fallu faire un peu de preprocessing quand même ^^
+    # à faire pour la suite du projet
     i=30
     precipitation = data['Precipitation'].iloc[-i]
     earth_skin_temperature = data['Earth Skin Temperature'].iloc[-i]
@@ -412,9 +415,8 @@ X = tf.constant([[[precipitation,
                 wet_bulb_temp_2m,
                 frost_point_2m,
                 cote ]]])
+#pour tester la tête du tensor avant de l'envoyer dans le modèle
 #st.write(X)
-
-
 #X=tf.constant([[[1,2,3,4,5,6,7,8,9,323.53]]])
 
 predict_button, model_architecture = st.beta_columns([2,2])
