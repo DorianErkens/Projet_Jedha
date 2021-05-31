@@ -1,12 +1,22 @@
 from numpy.core.fromnumeric import size
+from numpy.core.records import array
 import streamlit as st
 import pandas as pd 
 import numpy as np 
+import seaborn as sns
 import matplotlib.pyplot as plt
-import plotly.express as px 
-import seaborn as sns 
+import plotly.express as px  
 from sklearn.preprocessing import StandardScaler
-
+from sklearn.metrics import r2_score
+from streamlit.caching import cache
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import Dense, Dropout,Embedding, LSTM
+from tensorflow.keras.losses import MeanSquaredError
+from tensorflow.keras.metrics import Accuracy
+import tensorflow_addons as tfa
+from tensorflow_addons.metrics import RSquare
 import os
 import IPython
 import IPython.display
@@ -22,7 +32,7 @@ st.write('We have selected 5 different locations in France to work on, you will 
 st.write("""The content is designed in 5 steps :  
                 1. Data Geography  
                 2. Data Exploration  
-                3. Time Series Data Analysis   
+                3. Exploring Time Series Data Analysis   
                 4. Ground Water Level Prediction    
                 5. References & Credits""")
 
@@ -97,15 +107,15 @@ def load_process_data():
     'Wet Bulb temperature at 2 meters',
     'Dew/Frost point at 2 meters',
     'DateTime',
-    'Cote',
-    'Cote d-1']]
+    'Cote']]
     data = data.reset_index(drop=True)
     #process specifically the dataset for ml purposes
     data_ml = data.copy()
     data_ml.DateTime = pd.to_datetime(data.DateTime)
     data_ml.DateTime = pd.to_numeric(data_ml.DateTime)
     data_ml = data_ml.reset_index(drop=True)
-    
+    # datetime as index to properly manage the time serie
+    data = data.set_index("DateTime")
     return data,data_ml
 data,data_ml = load_process_data()
 
@@ -120,7 +130,7 @@ st.subheader('Descriptive analytics for {}'.format(localisation))
 st.write('Hereafter, you can have some informations about the dataset and the relationship and behaviors of some of its features ')
 def cote_time():
     st.subheader('State of groundwater across time')
-    cote_time = px.line(data_frame=data, x='DateTime',y='Cote')
+    cote_time = px.line(data_frame=data,y='Cote')
     st.plotly_chart(cote_time, use_container_width=True)
 cote_time()
 #Here we will propose on-demand graphs
@@ -141,36 +151,238 @@ choose_ur_graph()
 def time_graph():
     st.write('And if you want to see the evolution of one of the variables through time, you can do it hereafter')
     st.sidebar.write('Trend over time')
-    variable = st.sidebar.selectbox("What trend across time do you want to explore ?", data.columns.drop("DateTime"))
-    variable_accross_time = px.line(data_frame=data, x=data.DateTime,y=variable)
+    variable = st.sidebar.selectbox("What trend across time do you want to explore ?", data.columns)
+    variable_accross_time = px.line(data_frame=data,y=variable)
     st.subheader(f'{variable} evolution across time')
     st.plotly_chart(variable_accross_time,use_container_width=True)
 time_graph()
-
-def heatmap():
-    st.subheader('Evaluation of correlations between variables')
-    st.write('In order to properly analyze your dataset, you should always look at the correlation each variable has between one another')
-    corr = data.corr()
-    fig, ax = plt.subplots(figsize=(20, 15))
-    cmap = sns.diverging_palette(230, 20, as_cmap=True)
-    sns.heatmap(corr, cmap=cmap,annot=True, vmax=.3, center=0,
-                square=True, linewidths=.5, cbar_kws={"shrink": .5})
-    st.write(fig)
-heatmap()
 
 #Supervised Machine Learning
 st.header("Exploring Time Series Data Analysis ")
 #Function that will preprocess the dataset to be properly managed with ML/DL algo, namely Dat
 #add graph for autocorrelation and lags
 #explication pour chacun des graphes
-
-st.subheader('ARIMA Method')
+st.subheader('SARIMAX Method')
+st.write("""SARIMAX is an extension of the ARIMA model in Python, which stands for seasonal autoregressive integrated moving average with exogenous factors.   SARIMAX models support seasonality and exogenous factors besides the Autoregression, integration and Moving averages from ARIMA.   
+          Data scientists usually apply SARIMAX when they have to deal with time series data sets that have seasonal cycles.""")
+imaget1, imaget30 = st.beta_columns([2,2])
+with imaget1 : 
+    st.image('https://erdo-streamlit-911.s3.eu-central-1.amazonaws.com/athee_arima_t%2B1.png')
+    st.write('One-day prediction with R squared score of 0.97')
+with imaget30 : 
+    st.image('https://erdo-streamlit-911.s3.eu-central-1.amazonaws.com/athee_arima_t%2B30_1.png')
+    st.write('Thirty-day prediction with R squared score of 0.70 ')
 
 #Deep Learning
 st.header('Groundwater level prediction')
 st.subheader('Predictions are based on a single-shot multi-steps LSTM model ')
 st.write('In order to properly take previous observations into account, we have decided to based our model on RNN deep learning algorithms')
 
+#Hereafter, all the codes to process the data in order to infer data_windows that will help us in the modelisation of time series for deep learning
+
+#Split the dataset into three : train, validation and test
+column_indices = {name: i for i,name in enumerate(data.columns)}
+n=len(data)
+train_df = data[0:int(n*0.7)]
+val_df = data[int(n*0.7):int(n*.9)]
+test_df = data[int(n*.9):]
+num_features = data.shape[1]
+
+#Normalize the dataset, using only training datas as you can only use this ds since others cannot be seen by the model to properly work
+#La moyenne et l'écart type doivent être calculés uniquement à l'aide des données d'apprentissage afin que les modèles n'aient pas accès aux valeurs des ensembles de validation et de test.
+train_mean = train_df.mean()
+train_std = train_df.std()
+train_df = (train_df - train_mean)/train_std
+valid_df = (val_df - train_mean)/train_std
+test_df = (test_df - train_mean)/train_std
+#la classe WindowGenerator permet de construire un vecteur de données temporelles, ce qui permettra de proposer des données liées entre elles et de faire comprendre
+# au modèle que nous sommes sur des données dont la valeur peut êre expliquée par celle qui la précède
+class WindowGenerator():
+    def __init__(self, input_width, label_width, shift,
+               train_df=train_df, val_df=val_df, test_df=test_df,
+               label_columns=None):
+        # Store the raw data.
+        self.train_df = train_df
+        self.val_df = val_df
+        self.test_df = test_df
+
+        # Work out the label column indices.
+        self.label_columns = label_columns
+        if label_columns is not None:
+            self.label_columns_indices = {name: i for i, name in
+                                        enumerate(label_columns)}
+        self.column_indices = {name: i for i, name in
+                            enumerate(train_df.columns)}
+        # Work out the window parameters.
+        #width = le pas de temps avec lequel on veut travailler, cad le nombre de données historiques qu'on va mettre dans la fenêtre pour prédire la suite
+        self.input_width = input_width
+        self.label_width = label_width
+        #shift = le pas de temps que l'on veut prédire à la suite - offset
+        self.shift = shift
+
+        self.total_window_size = input_width + shift
+
+        self.input_slice = slice(0, input_width)
+        self.input_indices = np.arange(self.total_window_size)[self.input_slice]
+
+        self.label_start = self.total_window_size - self.label_width
+        self.labels_slice = slice(self.label_start, None)
+        self.label_indices = np.arange(self.total_window_size)[self.labels_slice]
+
+    def __repr__(self):
+        return '\n'.join([
+        f'Total window size: {self.total_window_size}',
+        f'Input indices: {self.input_indices}',
+        f'Label indices: {self.label_indices}',
+        f'Label column name(s): {self.label_columns}'])
+
+# Étant donné une liste d'entrées consécutives, la fonction split_window les convertira en une fenêtre d'entrées et une fenêtre d'étiquettes.
+def split_window(self, features):
+  inputs = features[:, self.input_slice, :]
+  labels = features[:, self.labels_slice, :]
+  if self.label_columns is not None:
+    labels = tf.stack(
+        [labels[:, :, self.column_indices[name]] for name in self.label_columns],
+        axis=-1)
+
+  # Slicing doesn't preserve static shape information, so set the shapes
+  # manually. This way the `tf.data.Datasets` are easier to inspect.
+  inputs.set_shape([None, self.input_width, None])
+  labels.set_shape([None, self.label_width, None])
+
+  return inputs, labels
+WindowGenerator.split_window = split_window
+#Fonction de viz pour les graphs afin de montrer la fenêtre temporelle (input,label, prediction)
+def plot(self, model=None, plot_col='Cote', max_subplots=3):
+    inputs, labels = self.example
+    plt.figure(figsize=(12, 8))
+    plot_col_index = self.column_indices[plot_col]
+    max_n = min(max_subplots, len(inputs))
+    for n in range(max_n):
+        plt.subplot(max_n, 1, n+1)
+        plt.ylabel(f'{plot_col} [normed]')
+        plt.plot(self.input_indices, inputs[n, :, plot_col_index],
+                label='Inputs', marker='.', zorder=-10)
+
+        if self.label_columns:
+            label_col_index = self.label_columns_indices.get(plot_col, None)
+        else:
+            label_col_index = plot_col_index
+
+        if label_col_index is None:
+            continue
+
+        plt.scatter(self.label_indices, labels[n, :, label_col_index],
+                edgecolors='k', label='Labels', c='green', s=64)
+        if model is not None:
+            predictions = model(inputs)
+            plt.scatter(self.label_indices, predictions[n, :, label_col_index],
+                  marker='X', edgecolors='k', label='Predictions',
+                  c='#ff7f0e', s=64)
+
+        if n == 0:
+            plt.legend()
+
+    plt.xlabel('Cote')
+WindowGenerator.plot = plot
+#Fonction pour créer des datasets TF à partir du data set de time series
+def make_dataset(self,data):
+  data = np.array(data, dtype=np.float32)
+  ds = tf.keras.preprocessing.timeseries_dataset_from_array(
+      data=data,
+      targets=None,
+      sequence_length=self.total_window_size,
+      sequence_stride=1,
+      shuffle=False,
+      batch_size=32)
+  
+  ds = ds.map(self.split_window)
+  return ds 
+WindowGenerator.make_dataset = make_dataset
+#Faciliter l'accès au dataset au travers de noms de variables plus logiques
+@property
+def train(self):
+  return self.make_dataset(self.train_df)
+
+@property
+def val(self):
+  return self.make_dataset(self.val_df)
+
+@property
+def test(self):
+  return self.make_dataset(self.test_df)
+
+@property
+def example(self):
+  """Get and cache an example batch of `inputs, labels` for plotting."""
+  result = getattr(self, '_example', None)
+  if result is None:
+    # No example batch was found, so get one from the `.train` dataset
+    result = next(iter(self.train))
+    # And cache it for next time
+    self._example = result
+  return result
+WindowGenerator.train = train
+WindowGenerator.val = val
+WindowGenerator.test = test
+WindowGenerator.example = example
+
+#Fonction de compilation & fit pour le modèle
+MAX_EPOCHS = 50
+def compile_and_fit(model,window,patience=2):
+    early_stopping=tf.keras.callbacks.EarlyStopping(monitor='mean_absolute_error',patience=patience,mode= 'min')
+    model.compile(loss=tf.losses.MeanSquaredError(),
+                optimizer=tf.optimizers.Adam(),
+                metrics=[tf.metrics.MeanAbsoluteError()])
+    history = model.fit(window.train,epochs=MAX_EPOCHS,
+                      validation_data=window.val,
+                      callbacks=[early_stopping])
+    return history
+
+
+#chargement du modèle LSTM entraîné sur Tensorflow
+model = tf.keras.models.load_model('Test_new_env/final_multi_lstm')
+#si cela ne marche pas on passera par un dossier github
+
+#End of the code for it, when time we will need to improve it 
+
+#Choose the model you want to predict
+st.subheader('Encode here the geophyscial features to help the model predict groundwater levels')
+precipitation, earth_skin_temperature = st.beta_columns([3,3])
+with precipitation : 
+    precipitation = st.number_input('Precipitation')
+with earth_skin_temperature : 
+    earth_skin_temperature = st.number_input('Earth Skin Temperature',)
+
+humidity, surface_pressure = st.beta_columns([3,3])
+with humidity : 
+    humidity = st.number_input('Relative Humidity at 2 meters')
+with surface_pressure : 
+    surface_pressure = st.number_input('Surface Pressure')
+
+#Variables for the input of the model.predict
+precipitation = precipitation
+earth_skin_temperature = earth_skin_temperature
+humidity = humidity
+temperature_2m = data['Temperature at 2 meters'].median
+wind_speed_10m = data['Wind speed at 10 meters'].median
+sky_incident = data['Sky Insolation Incident'].median
+surface_pressure = surface_pressure
+wet_bulb_temp_2m = data['Wet Bulb temperature at 2 meters'].median
+frost_point_2m = data['Dew/Frost point at 2 meters'].median
+#pour la facilité du modèle nous prendrons la dernière Cote enregistrée le 29/03/21
+cote = data['Cote'].iloc[-1]
+
+X = tf.constant([[[precipitation,
+                earth_skin_temperature,
+                humidity,
+                temperature_2m,
+                wind_speed_10m,
+                sky_incident,
+                surface_pressure,
+                wet_bulb_temp_2m,
+                frost_point_2m,
+                cote ]]])
 
 predict_button, model_architecture = st.beta_columns([2,2])
 with predict_button:
@@ -178,9 +390,8 @@ with predict_button:
         st.write(' ')
         st.write(' ')
         st.write(' ')
-        st.write(' ')
-        st.header('Predict Groundwater level')
-        input_var = st.slider(label='Predicted time frame (days)', min_value=1,max_value=50,key=4)
+        st.subheader('Predict Groundwater level')
+        time_frame = st.slider(label='Predicted time frame (days)', min_value=1,max_value=50,key=4)
         #multi_window = WindowGenerator(input_width=365,label_width=input_var,shift=input_var)
         submitted = st.form_submit_button('Predict')
         st.write(' ')
@@ -188,17 +399,23 @@ with predict_button:
         st.write(' ')
         st.write(' ')
         if submitted : 
-            prediction = [1]*input_var
-            st.write(f'The prediction will be here: {prediction}')
+            prediction = model.predict(X)
+            focused_prediction = prediction[0]
+            focused_prediction = focused_prediction[-time_frame:]
+            final_prediction = []
+            final_prediction = [final_prediction.append(array[-1]) for array in focused_prediction]
+            #create a dataframe to manipulate the normalized prediction and make them normal again
+            prediction_cote = pd.DataFrame(final_prediction, columns=['Pred cote'])
+            prediction_cote['Pred de_normalize'] = prediction_cote['Pred cote'] * train_std['Cote'] + train_mean['Cote']
+            exposed_prediction = prediction_cote['Pred de_normalize'].tolist()
+            st.write(f'The prediction will be here: {exposed_prediction}')
         
 with model_architecture:
-    img = 'https://erdo-streamlit-911.s3.eu-central-1.amazonaws.com/Dataset_final_project/LSTM_model_architecture_1.png'
-    st.subheader('Example : Single-shot multi-step LSTM model')
+    img = 'https://static.prod-cms.saurclient.fr/sites/default/files/styles/w1440/public/images/Cycle_eau1.png?itok=X1x6dT9S'
+    st.subheader('The Water Cycle ')
     st.image(img)
 
-#multi_window.plot(LSTM_model)
 
-st.header("Reference")
 st.subheader('Bibliography')
 st.write('Géron, A. (2019, September). Hands-on Machine Learning with Scikit-Learn,Keras and Tensorflow')
 st.write("Zhang, J., Zhu, Y., Zhang, X., Ye, M., Yang, J., Developing a Long Short-Term Memory(LSTM) based Model for Predicting Water Table Depth in Agricultural Areas, Journal of Hydrology (2018),doi: https://doi.org/10.1016/j.jhydrol.2018.04.065")
