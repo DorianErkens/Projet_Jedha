@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import plotly.express as px  
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score
-from streamlit.caching import cache
+#from streamlit.caching import cache
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.models import Sequential, load_model, save_model
