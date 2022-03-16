@@ -78,7 +78,7 @@ elif localisation == geo_data.City[3]:
 elif localisation == geo_data.City[4]: 
     DATA_PATH = "https://erdo-streamlit-911.s3.eu-central-1.amazonaws.com/Dataset_final_project/beauvois-en-vermandois_dataset.csv"
 
-@st.cache()
+#@st.cache()
 def load_process_data():
     data = pd.read_csv(DATA_PATH)
     data = data.rename(columns={
